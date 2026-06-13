@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, MessageSquare, Settings, PanelLeft } from 'lucide-react';
+import { Plus, MessageSquare, Settings, PanelLeft, Trash2 } from 'lucide-react';
 
-const Sidebar = ({ onOpenSettings }) => {
+const Sidebar = ({ onOpenSettings, onNewChat, chats = [], currentChatId, onSelectChat, onDeleteChat }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [width, setWidth] = useState(260);
   const [isResizing, setIsResizing] = useState(false);
@@ -47,7 +47,7 @@ const Sidebar = ({ onOpenSettings }) => {
           <PanelLeft size={18} />
         </button>
         {!isCollapsed && (
-          <button className="new-chat-btn">
+          <button className="new-chat-btn" onClick={onNewChat}>
             <Plus size={16} />
             <span>New Chat</span>
           </button>
@@ -56,14 +56,41 @@ const Sidebar = ({ onOpenSettings }) => {
       
       <div className="sidebar-content">
         {!isCollapsed && <div className="recent-header">Recent</div>}
-        <div className="chat-item active" title="Echo Session">
-          <MessageSquare size={16} />
-          {!isCollapsed && <span className="chat-item-text">Echo Session</span>}
-        </div>
-        <div className="chat-item" title="Template Test">
-          <MessageSquare size={16} />
-          {!isCollapsed && <span className="chat-item-text">Template Test</span>}
-        </div>
+        {chats.map(chat => (
+          <div 
+            key={chat.id} 
+            className={`chat-item ${chat.id === currentChatId ? 'active' : ''}`}
+            onClick={() => onSelectChat && onSelectChat(chat.id)}
+            title={chat.title}
+          >
+            <MessageSquare size={16} style={{ flexShrink: 0 }} />
+            {!isCollapsed && <span className="chat-item-text">{chat.title}</span>}
+            {!isCollapsed && onDeleteChat && (
+              <button 
+                className="delete-chat-btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteChat(chat.id);
+                }}
+                title="Delete Chat"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-color)',
+                  opacity: 0.5,
+                  cursor: 'pointer',
+                  marginLeft: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px',
+                  borderRadius: '4px'
+                }}
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        ))}
       </div>
       
       <div className="sidebar-footer">

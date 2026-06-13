@@ -1,6 +1,14 @@
 {
     "dependencies": [
-        "pytron-kit==0.3.14.post42"
+        "pytron-kit==0.3.14",
+        "langchain",
+        "langchain-openai",
+        "langchain-google-genai",
+        "langchain-community",
+        "llama-cpp-python",
+        "langgraph",
+        "keyring",
+        "ddgs"
     ],
     "plugins": []
 }

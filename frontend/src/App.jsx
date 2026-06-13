@@ -10,6 +10,14 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [chats, setChats] = useState([]);
+  const [currentChatId, setCurrentChatId] = useState(null);
+
+  useEffect(() => {
+    pytron.list_chats().then(res => {
+      setChats(res || []);
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const handleAiEvent = (e) => {
@@ -26,7 +34,30 @@ function App() {
             return [...prev, { id: Date.now().toString(), role: 'assistant', content: data.content }];
           }
         });
-      } else if (data.type === 'finish' || data.type === 'error') {
+      } else if (data.type === 'tool_start') {
+        setMessages(prev => [
+          ...prev, 
+          { id: Date.now().toString(), role: 'tool', content: `🛠️ Using tool: \`${data.tool}\`...`, isFinished: false }
+        ]);
+      } else if (data.type === 'tool_end') {
+        setMessages(prev => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg && lastMsg.role === 'tool') {
+             const outputText = data.output ? `\n\n<details class="tool-result-block"><summary>View Output</summary>\n\n\`\`\`\n${data.output}\n\`\`\`\n\n</details>` : '';
+             return [
+               ...prev.slice(0, -1),
+               { ...lastMsg, content: `✅ Finished using: \`${data.tool}\`${outputText}`, isFinished: true }
+             ];
+          }
+          return prev;
+        });
+      } else if (data.type === 'error') {
+        setIsTyping(false);
+        setMessages(prev => [
+          ...prev, 
+          { id: Date.now().toString(), role: 'error', content: `⚠️ **Error:** ${data.content}`, isFinished: true }
+        ]);
+      } else if (data.type === 'finish') {
         setIsTyping(false);
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
@@ -38,6 +69,10 @@ function App() {
           }
           return prev;
         });
+      } else if (data.type === 'chat_started') {
+        setCurrentChatId(data.chat_id);
+      } else if (data.type === 'chat_list_updated') {
+        setChats(data.chats || []);
       }
     };
 
@@ -50,7 +85,7 @@ function App() {
     setIsTyping(true);
 
     try {
-      await pytron.stream_ask(text);
+      await pytron.stream_ask(text, currentChatId);
     } catch (err) {
       console.error(err);
       setIsTyping(false);
@@ -60,6 +95,37 @@ function App() {
   const handleStop = () => {
     pytron.stop_generation();
     setIsTyping(false);
+  };
+
+  const handleNewChat = () => {
+    setCurrentChatId(null);
+    setMessages([]);
+  };
+
+  const handleSelectChat = async (chatId) => {
+    try {
+      setIsTyping(true);
+      const historyMessages = await pytron.load_chat(chatId);
+      setMessages(historyMessages || []);
+      setCurrentChatId(chatId);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleDeleteChat = async (chatId) => {
+    try {
+      const res = await pytron.delete_chat(chatId);
+      if (res && res.success) {
+        if (currentChatId === chatId) {
+          handleNewChat();
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const currentTheme = {
@@ -77,7 +143,14 @@ function App() {
       <div className="app-wrapper">
         <PytronTitleBar title="Agents Template" variant="windows" onClose={() => window.close()} />
         <div className="main-content">
-          <Sidebar onOpenSettings={() => setIsSettingsOpen(true)} />
+          <Sidebar 
+            onOpenSettings={() => setIsSettingsOpen(true)} 
+            onNewChat={handleNewChat} 
+            chats={chats}
+            currentChatId={currentChatId}
+            onSelectChat={handleSelectChat}
+            onDeleteChat={handleDeleteChat}
+          />
           <Chat 
             messages={messages} 
             onSendMessage={handleSendMessage} 

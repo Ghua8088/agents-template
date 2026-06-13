@@ -29,6 +29,7 @@ declare module 'pytron-client' {
      */
     log(message: string): Promise<void>;
 
+    __pytron_event__(name: any, data: any): Promise<any>;
     /**
      * Opens a URL or file path in the default system browser/handler.
      */
@@ -40,36 +41,82 @@ declare module 'pytron-client' {
     /**
      * Copies text to the system clipboard.
      */
-    clipboard_write_text(text: string): Promise<any>;
+    clipboard_write_text(text: string): Promise<boolean>;
     /**
      * Returns text from the system clipboard.
      */
-    clipboard_read_text(): Promise<any>;
+    clipboard_read_text(): Promise<string>;
     /**
      * Returns hardware and OS information.
      */
-    system_get_info(): Promise<any>;
+    system_get_info(): Promise<Record<string, any>>;
+    /**
+     * Forces rounded or square corners on Windows 11.
+     */
+    window_set_curvature(preference: any): Promise<any>;
+    /**
+     * Sets the window border color on supported platforms.
+     */
+    window_set_border_color(color_hex: string): Promise<any>;
+    /**
+     * Sets the window background material (Windows 11).
+     * Options: 'mica', 'acrylic', 'tabbed', 'none'
+     */
+    window_set_background_material(material: string): Promise<any>;
+    /**
+     * Helper to enable/disable Mica effect on Windows 11.
+     */
+    window_set_mica_effect(enable: boolean): Promise<any>;
     /**
      * Sets a value in the persistent store.
      */
-    store_set(key: any, value: any): Promise<any>;
+    store_set(key: string, value: any): Promise<any>;
     /**
      * Gets a value from the persistent store.
      */
-    store_get(key: any, default: any): Promise<any>;
+    store_get(key: string, default_: any): Promise<any>;
     /**
      * Removes a key from the persistent store.
      */
-    store_delete(key: any): Promise<any>;
+    store_delete(key: string): Promise<boolean>;
+    /**
+     * Quits the application.
+     */
     app_quit(): Promise<any>;
+    /**
+     * Shows all application windows.
+     */
     app_show(): Promise<any>;
+    /**
+     * Hides all application windows.
+     */
     app_hide(): Promise<any>;
-    app_is_visible(): Promise<any>;
+    /**
+     * Returns True if the primary window is visible.
+     */
+    app_is_visible(): Promise<boolean>;
+    /**
+     * Centers the primary window on screen.
+     */
+    app_center(): Promise<any>;
+    /**
+     * Minimizes the primary window.
+     */
+    app_minimize(): Promise<any>;
+    /**
+     * Maximizes the primary window.
+     */
+    app_maximize(): Promise<any>;
+    /**
+     * Restores the primary window from minimized/maximized state.
+     */
+    app_restore(): Promise<any>;
     /**
      * Broadcasts an event to all open windows.
      * This enables simple cross-window communication.
      */
     app_publish(event_name: string, data: any): Promise<any>;
+    app_ping(): Promise<any>;
     /**
      * Checks for application updates.
      * Returns update info if available, else None.
@@ -84,25 +131,34 @@ declare module 'pytron-client' {
      * Toggles the Pytron Inspector window.
      */
     app_toggle_inspector(): Promise<any>;
+    /**
+     * Opens developer tools for the primary window when supported.
+     */
+    app_open_devtools(): Promise<any>;
     change_model(model_name: any): Promise<any>;
+    clear_history(): Promise<any>;
+    delete_chat(chat_id: string): Promise<any>;
+    get_api_key_status(): Promise<any>;
+    get_gemini_api_key_status(): Promise<any>;
     get_models(): Promise<any>;
+    list_chats(): Promise<any>;
+    load_chat(chat_id: string): Promise<any>;
+    set_api_key(key: string): Promise<any>;
+    set_gemini_api_key(key: string): Promise<any>;
     stop_generation(): Promise<any>;
     stream_ask(prompt: string, chat_id: string, images: any[]): Promise<any>;
     suggest(query: string): Promise<any>;
     minimize(): Promise<any>;
     toggle_maximize(): Promise<any>;
-    /**
-     * Closes the window.
-     * If 'close_to_tray' config is True and force is False, it just hides the window.
-     */
     close(force: any): Promise<any>;
     hide(): Promise<any>;
     show(): Promise<any>;
     start_drag(): Promise<any>;
     set_title(title: any): Promise<any>;
     set_size(w: any, h: any): Promise<any>;
-    center(): Promise<any>;
+    center(width: any, height: any): Promise<any>;
     system_notification(title: any, message: any, icon: any): Promise<any>;
+    set_bounds(x: any, y: any, width: any, height: any): Promise<any>;
     trigger_shortcut(combo: string): Promise<boolean>;
     get_registered_shortcuts(): Promise<string[]>;
   }

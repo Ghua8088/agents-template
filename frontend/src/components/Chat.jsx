@@ -15,6 +15,26 @@ marked.setOptions({
     return hljs.highlightAuto(code).value;
   }
 });
+// Helper to parse `<think>` blocks into HTML details tags
+const formatThinkBlocks = (content) => {
+  if (!content) return '';
+  let formatted = content;
+  
+  // Replace completed think blocks
+  formatted = formatted.replace(
+    /<think>([\s\S]*?)<\/think>/g,
+    '<details class="think-block"><summary>Thought process</summary>\n\n$1\n\n</details>'
+  );
+  
+  // Replace open think blocks (during streaming)
+  if (formatted.includes('<think>')) {
+    const parts = formatted.split('<think>');
+    formatted = parts[0] + '<details open class="think-block"><summary>Thinking...</summary>\n\n' + parts[1] + '\n\n</details>';
+  }
+  
+  return formatted;
+};
+
 export default function Chat({ messages, onSendMessage, isTyping, onStop }) {
   const [input, setInput] = useState('');
   const bottomRef = useRef(null);
@@ -63,7 +83,11 @@ export default function Chat({ messages, onSendMessage, isTyping, onStop }) {
             </div>
             <div className="message-content">
               {msg.role === 'assistant' ? (
-                 <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(msg.content || '') }} />
+                 <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(formatThinkBlocks(msg.content || '')) }} />
+              ) : msg.role === 'tool' ? (
+                 <div className="tool-body markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(msg.content || '') }} style={{opacity: 0.7, fontSize: '0.9em', padding: '8px', background: 'var(--secondary-bg)', borderRadius: '6px', borderLeft: '3px solid var(--accent-color)'}} />
+              ) : msg.role === 'error' ? (
+                 <div className="error-body markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(msg.content || '') }} style={{color: '#ff6b6b'}} />
               ) : (
                  <div className="user-text">{msg.content}</div>
               )}
