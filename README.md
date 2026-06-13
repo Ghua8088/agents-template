@@ -2,6 +2,7 @@
   <img src="./AT.png" alt="Agents Template Logo" height="80" />
   <h1>Agents Template</h1>
   <p>A clean, lightweight, and unopinionated starting point for building AI Agents with Pytron.</p>
+  <img src="./image.png" alt="Agents sample screenshot">
 </div>
 
 ---
