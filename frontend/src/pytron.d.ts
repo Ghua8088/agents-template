@@ -143,6 +143,7 @@ declare module 'pytron-client' {
     get_models(): Promise<any>;
     list_chats(): Promise<any>;
     load_chat(chat_id: string): Promise<any>;
+    save_chat(chat_id: string, messages: any[]): Promise<any>;
     set_api_key(key: string): Promise<any>;
     set_gemini_api_key(key: string): Promise<any>;
     stop_generation(): Promise<any>;

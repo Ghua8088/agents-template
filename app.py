@@ -243,7 +243,6 @@ class AgentBridge:
                             
                             self.history.append(("user", p))
                             self.history.append(("assistant", response_text))
-                            self._persist_chat(chat_id, p, response_text)
                             
                         except Exception as ex:
                             self.app.emit('ai_agent_event', {
@@ -353,7 +352,6 @@ class AgentBridge:
                         # Update history
                         self.history.append(("user", p))
                         self.history.append(("assistant", full_response))
-                        self._persist_chat(chat_id, p, full_response)
 
                     except Exception as ex:
                         self.app.emit('ai_agent_event', {
@@ -400,10 +398,50 @@ class AgentBridge:
         self.history = []
         for msg in messages:
             role = msg.get("role")
-            content = msg.get("content")
+            content = msg.get("rawContent") or msg.get("content")
             if role in ("user", "assistant") and content:
                 self.history.append((role, content))
         return messages
+
+    def save_chat(self, chat_id: str, messages: list):
+        try:
+            # 1. Save messages list directly to CHAT_{chat_id}
+            self.app.store_set(f"CHAT_{chat_id}", messages)
+            
+            # 2. Update metadata (title/updated_at)
+            chats = self.app.store_get("CHAT_LIST", [])
+            chat_meta = None
+            for c in chats:
+                if c.get("id") == chat_id:
+                    chat_meta = c
+                    break
+            
+            if not chat_meta:
+                # Find the first user message in messages to construct the title
+                first_prompt = "New Chat"
+                for msg in messages:
+                    if msg.get("role") == "user" and msg.get("content"):
+                        first_prompt = msg.get("content")
+                        break
+                title = first_prompt[:30] + "..." if len(first_prompt) > 30 else first_prompt
+                chat_meta = {
+                    "id": chat_id,
+                    "title": title,
+                    "created_at": datetime.now().isoformat()
+                }
+                chats.insert(0, chat_meta)
+            
+            chat_meta["updated_at"] = datetime.now().isoformat()
+            chats.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
+            self.app.store_set("CHAT_LIST", chats)
+            
+            self.app.emit('ai_agent_event', {
+                'type': 'chat_list_updated',
+                'chats': chats
+            })
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
         
     def delete_chat(self, chat_id: str):
         try:
@@ -418,37 +456,6 @@ class AgentBridge:
             return {"success": True, "chats": chats}
         except Exception as e:
             return {"success": False, "error": str(e)}
-
-    def _persist_chat(self, chat_id: str, prompt: str, response: str):
-        try:
-            messages = self.app.store_get(f"CHAT_{chat_id}", [])
-            messages.append({"role": "user", "content": prompt})
-            messages.append({"role": "assistant", "content": response})
-            self.app.store_set(f"CHAT_{chat_id}", messages)
-            
-            chats = self.app.store_get("CHAT_LIST", [])
-            chat_meta = None
-            for c in chats:
-                if c.get("id") == chat_id:
-                    chat_meta = c
-                    break
-            if not chat_meta:
-                title = prompt[:30] + "..." if len(prompt) > 30 else prompt
-                chat_meta = {
-                    "id": chat_id,
-                    "title": title,
-                    "created_at": datetime.now().isoformat()
-                }
-                chats.insert(0, chat_meta)
-            chat_meta["updated_at"] = datetime.now().isoformat()
-            chats.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
-            self.app.store_set("CHAT_LIST", chats)
-            self.app.emit('ai_agent_event', {
-                'type': 'chat_list_updated',
-                'chats': chats
-            })
-        except Exception as e:
-            print(f"Error persisting chat: {e}")
 
     def suggest(self, query: str):
         return ["What is the current time?", "What's the weather in San Francisco?"]

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import pytron from 'pytron-client';
 import './index.css';
 import { PytronTitleBar, ThemeProvider } from 'pytron-ui/react';
@@ -12,6 +12,11 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
+
+  const chatIdRef = useRef(currentChatId);
+  useEffect(() => {
+    chatIdRef.current = currentChatId;
+  }, [currentChatId]);
 
   useEffect(() => {
     pytron.list_chats().then(res => {
@@ -44,10 +49,14 @@ function App() {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg && lastMsg.role === 'tool') {
              const outputText = data.output ? `\n\n<details class="tool-result-block"><summary>View Output</summary>\n\n\`\`\`\n${data.output}\n\`\`\`\n\n</details>` : '';
-             return [
+             const updated = [
                ...prev.slice(0, -1),
                { ...lastMsg, content: `✅ Finished using: \`${data.tool}\`${outputText}`, isFinished: true }
              ];
+             if (chatIdRef.current) {
+               pytron.save_chat(chatIdRef.current, updated).catch(console.error);
+             }
+             return updated;
           }
           return prev;
         });
@@ -61,16 +70,24 @@ function App() {
         setIsTyping(false);
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
+          let updated = prev;
           if (lastMsg && lastMsg.role === 'assistant') {
-            return [
+            updated = [
               ...prev.slice(0, -1),
               { ...lastMsg, isFinished: true }
             ];
           }
-          return prev;
+          if (chatIdRef.current) {
+            pytron.save_chat(chatIdRef.current, updated).catch(console.error);
+          }
+          return updated;
         });
       } else if (data.type === 'chat_started') {
         setCurrentChatId(data.chat_id);
+        setMessages(prev => {
+          pytron.save_chat(data.chat_id, prev).catch(console.error);
+          return prev;
+        });
       } else if (data.type === 'chat_list_updated') {
         setChats(data.chats || []);
       }
@@ -81,7 +98,14 @@ function App() {
   }, []);
 
   const handleSendMessage = async (text) => {
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    const userMsg = { id: Date.now().toString(), role: 'user', content: text };
+    setMessages(prev => {
+      const updated = [...prev, userMsg];
+      if (currentChatId) {
+        pytron.save_chat(currentChatId, updated).catch(console.error);
+      }
+      return updated;
+    });
     setIsTyping(true);
 
     try {
