@@ -32,10 +32,12 @@
     "dev_port": null,
     "plugins_dir": null,
     "plugins": [],
-    "crystal_mode": false,
+    "crystal_mode": true,
     "virtual_entry_point": false,
     "splash_image": null,
-    "force-package": [],
+    "force-package": [
+        "tiktoken_ext"
+    ],
     "include_patterns": [],
     "exclude_patterns": [],
     "macos_plist": {},
